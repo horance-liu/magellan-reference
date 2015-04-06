@@ -1,56 +1,171 @@
 \begin{savequote}[45mm]
-\ascii{Do the simplest thing that could possibly work.}
+\ascii{I'm not a great programmer; I'm just a good programmer with great habits.}
 \qauthor{\ascii{- Kent Beck}}
 \end{savequote}
 
-\chapter{Background} 
-\label{ch:background}
+\chapter{初识Magellan} 
+\label{ch:introduction}
 
-\section{问题提出}
+\section{简介}
 
 \begin{content}
 
-扫地机器人\ascii{(robot cleaner)}，又称自动打扫机、智能吸尘器等。能凭借一定的人工智能，自动在房间内完成地板清理工作。
+\ascii{Magellan}是一个简单的、可扩展的、且用户友好的\ascii{xUnit}测试框架。\ascii{Magellan}设计灵感来自于\ascii{Java}社区著名的测试框架：\ascii{JUnit}。
 
-\ascii{Bosch}公司是领先的扫地机器人制造商。\ascii{Bosch}的工程师研发了一款机器人，它接受远端遥感指令，并完成一些简单的动作。
-
-为了方便控制机器人的导航，工程师使用三元组\ascii{(x, y, d)}来表示机器人的位置信息；其中\ascii{(x,y)}表示机器人的坐标位置，\ascii{d}表示机器人的方向(包括\ascii{East, South, West, North}四个方向)。
-
-假设机器人初始位置为\ascii{(0, 0, N)}，表示机器人处在原点坐标、并朝向北。
+\ascii{Magellan}采用\ascii{C++11}的语言特性，使得\ascii{xUnit}的设计和实现更加简单和自然；整体框架设计也更加具有可扩展性；最重要的是，\ascii{Magellan}使用例设计更加具有面向对象的特性，用户接口的\ascii{DSL}也更加地友好和统一。
 
 \end{content}
 
-\section{技能要求}
+\section{安装}
 
 \begin{content}
 
-在实现需求的前提下，增加如下一些技能要求。
+\subsection{构建系统}
 
-\begin{enum}
-\eitem{每个迭代\ascii{45}分钟}
-\eitem{结对编程}
-\eitem{不允许使用鼠标}
-\eitem{不允许使用\ascii{IDE}}
-\eitem{坚持使用\ascii{TDD}开发}
-\eitem{持续重构代码}
-\eitem{坚持良好的代码提交习惯}
-\eitem{教练点评的坏味道，下一迭代必须纠正}
-\eitem{参与互相点评的环节}
-\eitem{互相重构不同\ascii{pair}的代码}
-\end{enum}
+为了简化\ascii{Magellan}的依赖管理和构建过程，\ascii{Magellan}采用\ascii{CMake}和\ascii{Rake}的构建系统。为此必须先安装{CMake}和\ascii{Ruby}，并确保\ascii{Rake}可用。
+
+\subsubsection{安装CMake}
+
+CMake的下载地址是：\href{http://www.cmake.org}{http://www.cmake.org}。以\ascii{Ubuntu}为例，使用\ascii{apt-get}安装\ascii{CMake}。
+
+\begin{leftbar}
+\begin{ruby}[caption={安装RVM}]
+$ sudo apt-get install cmake
+\end{ruby}
+\end{leftbar}
+
+\subsubsection{安装Ruby}
+
+为了方便管理\ascii{Ruby}的多个版本，推荐使用\ascii{RVM}安装\ascii{Ruby}。
+
+\begin{leftbar}
+\begin{ruby}[caption={安装RVM}]
+$ curl -L get.rvm.io | bash -s stable
+$ source ~/.rvm/scripts/rvm
+$ source ~/.bashrc
+$ source ~/.bash_profile
+\end{ruby}
+\end{leftbar}
+
+然后使用\ascii{RVM}安装特定版本的\ascii{Ruby}，以安装\ascii{Ruby-2.1.5}为例。
+
+\begin{leftbar}
+\begin{ruby}[caption={安装Ruby}]
+$ rvm install 2.1.5
+$ rvm use 2.1.5 --default
+\end{ruby}
+\end{leftbar}
+
+\subsubsection{安装Magellan}
+
+最后使用\ascii{Git}从\ascii{Gitlab}克隆一份\ascii{MDK}实现，按照指令完成\ascii{Magellan}的安装： 
+
+\begin{leftbar}
+\begin{ruby}[caption={安装Magellan}]
+$ git clone https://gitlab.com/horance/mdk.git
+$ cd mdk
+$ rake
+\end{ruby}
+\end{leftbar}
 
 \end{content}
 
-\section{参考实现}
+\section{破冰之旅}
 
 \begin{content}
 
-本文所使用的代码，读者可以从\ascii{Gitlab}上自由下载、修改和传播。
+\subsection{第一个测试用例}
 
-软件设计是一门艺术，因作者的经验、能力都非常有限，此实现仅作供参考。如果大家发现了问题，或者有更加简单、漂亮的设计，请及时反馈给我，我将感激不尽。
+\begin{leftbar}
+\begin{c++}[caption={test/robot-cleaner/TestRobotCleaner.cpp}]
+#include "magellan/magellan.hpp"
+#include "robot-cleaner/RobotCleaner.h"
 
-\ascii{Git}地址：\href{https://gitlab.com/horance/robot-cleaner-cpp}{git clone https://gitlab.com/horance/robot-cleaner-cpp.git}
+USING_HAMCREST_NS
 
-\ascii{Email}地址：\href{mailto:horance@outlook.com}{horance@outlook.com}
+FIXTURE(RobotCleanerTest)
+{
+    RobotCleaner robot;
+
+    void WHEN_I_send_instruction(Instruction* instruction)
+    {
+        robot.exec(instruction);
+    }
+
+    void THEN_the_robot_cleaner_should_be_in(const Position& position)
+    {
+        ASSERT_THAT(robot.getPosition(), is(position));
+    }
+
+    TEST("at the beginning, the robot should be in at the initial position")
+    {
+        ASSERT_THAT(robot.getPosition(), is(Position(0, 0, NORTH)));
+    }
+
+    TEST("left instruction: 1-times")
+    {
+        WHEN_I_send_instruction(left());
+        THEN_the_robot_cleaner_should_be_in(Position(0, 0, WEST));
+    }
+
+    TEST("left instruction: 2-times")
+    {
+        WHEN_I_send_instruction(repeat(left(), 2));
+        THEN_the_robot_cleaner_should_be_in(Position(0, 0, SOUTH));
+    }
+
+    TEST("left instruction: 3-times")
+    {
+        WHEN_I_send_instruction(repeat(left(), 3));
+        THEN_the_robot_cleaner_should_be_in(Position(0, 0, EAST));
+    }
+
+    TEST("left instruction: 4-times")
+    {
+        WHEN_I_send_instruction(repeat(left(), 4));
+        THEN_the_robot_cleaner_should_be_in(Position(0, 0, NORTH));
+    }
+};
+\end{c++}
+\end{leftbar}
+
+\subsection{Main函数}
+
+\begin{leftbar}
+\begin{c++}[caption={test/main.cpp}]
+#include "magellan/magellan.hpp"
+
+int main(int argc, char** argv)
+{
+    return magellan::run_all_tests(argc, argv);
+}
+\end{c++}
+\end{leftbar}
+
+\subsection{运行用例}
+
+\begin{leftbar}
+\begin{ruby}[caption={运行结果}]
+[==========] Running 5 test cases.
+[----------] 5 tests from All Tests
+[----------] 5 tests from RobotCleanerTest
+[ RUN      ] RobotCleanerTest::at the beginning, the robot should be in at the initial position
+[       OK ] RobotCleanerTest::at the beginning, the robot should be in at the initial position(60 us)
+[ RUN      ] RobotCleanerTest::left instruction: 1-times
+[       OK ] RobotCleanerTest::left instruction: 1-times(60 us)
+[ RUN      ] RobotCleanerTest::left instruction: 2-times
+[       OK ] RobotCleanerTest::left instruction: 2-times(60 us)
+[ RUN      ] RobotCleanerTest::left instruction: 3-times
+[       OK ] RobotCleanerTest::left instruction: 3-times(60 us)
+[ RUN      ] RobotCleanerTest::left instruction: 4-times
+[       OK ] RobotCleanerTest::left instruction: 4-times(60 us)
+[----------] 5 tests from RobotCleanerTest
+
+[----------] 5 tests from All Tests
+
+[==========] 5 test cases ran.
+[  TOTAL   ] PASS: 5  FAILURE: 0  ERROR: 0  TIME: 300 us
+\end{ruby}
+\end{leftbar}
 
 \end{content}
