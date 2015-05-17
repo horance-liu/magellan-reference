@@ -3,133 +3,347 @@
 \qauthor{\ascii{- Martin Flower}}
 \end{savequote}
 
-\chapter{Round} 
-\label{ch:round}
+\chapter{断言} 
+\label{ch:assert-that}
 
-\section{需求}
+\section{ASSERT\_THAT}
 
 \begin{content}
 
-\begin{enum}
-\eitem{当\ascii{Robot}收到\ascii{ROUND}指令后，\ascii{Robot}顺时针旋转\ascii{180}度掉头；}
-\eitem{例如\ascii{Robot}原来在\ascii{(0, 0, N)}，执行\ascii{ROUND}指令后，新的位置在\ascii{(0, 0, S)}；}
-\end{enum}
+\ascii{Magellan}只支持一种断言原语：\ascii{ASSERT\_THAT}，从而避免用户在\ascii{ASSERT\_EQ/ASSERT\_NE, ASSERT\_TRUE/ASSERT\_FALSE}之间做选择时的困扰，使其断言更加具有统一性。此外，\ascii{ASSERT\_THAT}使得断言更加具有表达力，更加符合语言习惯。
+
+\begin{leftbar}
+\begin{c++}[caption={test/hamcrest/CloseToTest.cpp}]
+#include <magellan/magellan.hpp>
+
+FIXTURE(CloseToTest)
+{
+    TEST("double")
+    {
+        ASSERT_THAT(1.0, close_to(1.0, 0.5));
+        ASSERT_THAT(0.5, close_to(1.0, 0.5));
+        ASSERT_THAT(1.5, close_to(1.0, 0.5));
+    }
+};
+\end{c++}
+\end{leftbar}
 
 \end{content}
 
-\section{round指令}
+\section{Matcher}
 
 \begin{content}
 
-\subsection{测试用例}
+\subsection{Anything}
+
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+匹配器 & 说明 \\
+\midrule
+\ascii{anything}  & \ascii{总是匹配} \\
+\ascii{\_}  & \ascii{anything语法糖} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{anything}
+\label{tbl:anything-matcher}
+\end{table}
 
 \begin{leftbar}
-\begin{c++}[caption={test/robot-cleaner/TestRobotCleaner.h}]
-TEST("round instruction")
+\begin{c++}[caption={test/hamcrest/AnythingTest.cpp}]
+#include <magellan/magellan.hpp>
+
+USING_HAMCREST_NS
+
+FIXTURE(AnythingTest)
 {
-    WHEN_I_send_instruction(round());
-    THEN_the_robot_cleaner_should_be_in(Position(0, 0, SOUTH));
-}
+    TEST("should always be matched")
+    {
+        ASSERT_THAT(1, anything<int>());
+        ASSERT_THAT(1u, anything<unsigned int>());
+        ASSERT_THAT(1.0, anything<double>());
+        ASSERT_THAT(1.0f, anything<float>());
+        ASSERT_THAT(false, anything<bool>());
+        ASSERT_THAT(true, anything<bool>());
+        ASSERT_THAT(nullptr, anything<std::nullptr_t>());
+    }
+
+    TEST("should support _ as syntactic sugar")
+    {
+        ASSERT_THAT(1u, _(int));
+        ASSERT_THAT(1.0f, _(float));
+        ASSERT_THAT(false, _(int));
+        ASSERT_THAT(nullptr, _(std::nullptr_t));
+    }
+};
 \end{c++}
 \end{leftbar}
 
-\subsection{实现round指令}
+\subsection{比较器}
+
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+匹配器 & 说明 \\
+\midrule
+\ascii{eq}  & \ascii{相等} \\
+\ascii{ne}  & \ascii{不相等} \\
+\ascii{lt}  & \ascii{小于} \\
+\ascii{gt}  & \ascii{大于} \\
+\ascii{le}  & \ascii{小于或等于} \\
+\ascii{ge}  & \ascii{大于或等于} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{比较的Matcher}
+\label{tbl:comparable-matcher}
+\end{table}
 
 \begin{leftbar}
-\begin{c++}[caption={include/robot-cleaner/Instruction.h}]
-#ifndef HC37C3D94_43F1_4677_BD56_34CB78EFEC75
-#define HC37C3D94_43F1_4677_BD56_34CB78EFEC75
+\begin{c++}[caption={test/hamcrest/ComparableTest.cpp}]
+#include <magellan/magellan.hpp>
 
-#include "base/Role.h"
+USING_HAMCREST_NS
 
-struct Position;
-
-DEFINE_ROLE(Instruction)
+FIXTURE(EqualToTest)
 {
-    ABSTRACT(void exec(Position& position));
+    TEST("should allow compare to integer")
+    {
+        ASSERT_THAT(0xFF, eq(0xFF));
+        ASSERT_THAT(0xFF, is(eq(0xFF)));
+
+        ASSERT_THAT(0xFF, is(0xFF));
+        ASSERT_THAT(0xFF == 0xFF, is(true));
+    }
+
+    TEST("should allow compare to bool")
+    {
+        ASSERT_THAT(true, eq(true));
+        ASSERT_THAT(false, eq(false));
+    }
+
+    TEST("should allow compare to string")
+    {
+        ASSERT_THAT("hello", eq("hello"));
+        ASSERT_THAT("hello", eq(std::string("hello")));
+        ASSERT_THAT(std::string("hello"), eq(std::string("hello")));
+    }
 };
 
-Instruction* round();
+FIXTURE(NotEqualToTest)
+{
+    TEST("should allow compare to integer")
+    {
+        ASSERT_THAT(0xFF, ne(0xEE));
 
-#endif
+        ASSERT_THAT(0xFF, is_not(0xEE));
+        ASSERT_THAT(0xFF, is_not(eq(0xEE)));
+        ASSERT_THAT(0xFF != 0xEE, is(true));
+    }
+
+    TEST("should allow compare to boolean")
+    {
+        ASSERT_THAT(true, ne(false));
+        ASSERT_THAT(false, ne(true));
+    }
+
+    TEST("should allow compare to string")
+    {
+        ASSERT_THAT("hello", ne("world"));
+        ASSERT_THAT("hello", ne(std::string("world")));
+        ASSERT_THAT(std::string("hello"), ne(std::string("world")));
+    }
+};
 \end{c++}
 \end{leftbar}
 
-编译通过了，这次让步子迈大了一点，为了快速让链接和测试通过，先伪实现。
+\subsection{修饰器}
+
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+匹配器 & 说明 \\
+\midrule
+\ascii{is}  & \ascii{可读性装饰器} \\
+\ascii{is\_not}  & \ascii{可读性装饰器} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{修饰的Matcher}
+\label{tbl:is-matcher}
+\end{table}
 
 \begin{leftbar}
-\begin{c++}[caption={src/robot-cleaner/Instruction.cpp}]
-namespace
-{
-    struct RoundInstruction : Instruction
-    {
-        OVERRIDE(void exec(Position& position))
-        {
-            position = Position(0, 0, SOUTH);
-        }
-    };
-}
+\begin{c++}[caption={test/hamcrest/IsNotTest.cpp}]
+#include <magellan/magellan.hpp>
 
-Instruction* round()
+USING_HAMCREST_NS
+
+FIXTURE(IsNotTest)
 {
-    return new RoundInstruction;
-}
+    TEST("integer")
+    {
+        ASSERT_THAT(0xFF, is_not(0xEE));
+        ASSERT_THAT(0xFF, is_not(eq(0xEE)));
+    }
+
+    TEST("string")
+    {
+        ASSERT_THAT("hello", is_not("world"));
+        ASSERT_THAT("hello", is_not(eq("world")));
+
+        ASSERT_THAT("hello", is_not(std::string("world")));
+        ASSERT_THAT(std::string("hello"), is_not(std::string("world")));
+    }
+};
 \end{c++}
 \end{leftbar}
 
-测试通过了，接下来改善设计。经过分析，\ascii{round}指令只不过是连续的两次\ascii{right}指令，为此引入\ascii{RepeatedInstruction}的概念，用于修饰\ascii{right}指令，它将\ascii{right}指令连续执行\ascii{2}次。
+\subsection{空指针}
 
-\begin{tabular}{@{}p{\dimexpr0.45\linewidth-\tabcolsep} 
-                 | p{\dimexpr0.45\linewidth-\tabcolsep}@{}}
-\begin{c++}[caption={src/robot-cleaner/Instruction.cpp}]
-namespace
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+匹配器 & 说明 \\
+\midrule
+\ascii{nil}  & \ascii{空指针} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{空指针}
+\label{tbl:nil-matcher}
+\end{table}
+
+\begin{leftbar}
+\begin{c++}[caption={test/hamcrest/NilTest.cpp}]
+#include <magellan/magellan.hpp>
+
+USING_HAMCREST_NS
+
+FIXTURE(NilTest)
 {
-    struct RoundInstruction : Instruction
+    TEST("equal_to")
     {
-        OVERRIDE(void exec(Position& position))
-        {
-            position = Position(0, 0, SOUTH);
-        }
-    };
-}
+        ASSERT_THAT(nullptr, eq(nullptr));
+        ASSERT_THAT(0, eq(NULL));
+        ASSERT_THAT(NULL, eq(NULL));
+        ASSERT_THAT(NULL, eq(0));
+    }
 
-Instruction* round()
-{
-    return new RoundInstruction;
-}
-\end{c++}
-&
-\begin{c++}[caption={src/robot-cleaner/Instruction.cpp}]
-namespace
-{
-    struct RepeatedInstruction : Instruction
+    TEST("is")
     {
-        RepeatedInstruction(Instruction* instruction, int n)
-         : instruction(instruction), n(n)
-        {}
+        ASSERT_THAT(nullptr, is(nullptr));
+        ASSERT_THAT(nullptr, is(eq(nullptr)));
 
-    private:
-        OVERRIDE(void exec(Point& point, Orientation& orientation) const)
-        {
-            for (auto i=0; i<n; i++)
-            {
-                instruction->exec(point, orientation);
-            }
-        }
+        ASSERT_THAT(0, is(0));
+        ASSERT_THAT(NULL, is(NULL));
+        ASSERT_THAT(0, is(NULL));
+        ASSERT_THAT(NULL, is(0));
+    }
 
-    private:
-        std::unique_ptr<Instruction> instruction;
-        int n;
-    };
-}
-
-Instruction* round()
-{
-    return new RepeatedInstruction(right(), 2);
-}
+    TEST("nil")
+    {
+        ASSERT_THAT((void*)NULL, nil());
+        ASSERT_THAT((void*)0, nil());
+        ASSERT_THAT(nullptr, nil());
+    }
+};
 \end{c++}
-\end{tabular}
+\end{leftbar}
 
-测试通过了。
+\subsection{字符串}
+
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+\ascii{匹配器} & \ascii{说明} \\
+\midrule
+\ascii{contains\_string}  & \ascii{断言是否包含子串} \\
+\ascii{contains\_string\_ignoring\_case}  & \ascii{忽略大小写，断言是否包含子串} \\
+\ascii{starts\_with}  & \ascii{断言是否以该子串开头} \\
+\ascii{starts\_with\_ignoring\_case}  & \ascii{忽略大小写，断言是否以该子串开头} \\
+\ascii{ends\_with}  & \ascii{断言是否以该子串结尾} \\
+\ascii{ends\_with\_ignoring\_case}  & \ascii{忽略大小写，断言是否以该子串结尾} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{字符串的Matcher}
+\label{tbl:string-matcher}
+\end{table}
+
+\begin{leftbar}
+\begin{c++}[caption={test/hamcrest/StartsWithTest.cpp}]
+#include <magellan/magellan.hpp>
+
+USING_HAMCREST_NS
+
+FIXTURE(StartsWithTest)
+{
+    TEST("case sensitive")
+    {
+        ASSERT_THAT("ruby-cpp", starts_with("ruby"));
+        ASSERT_THAT("ruby-cpp", is(starts_with("ruby")));
+
+        ASSERT_THAT(std::string("ruby-cpp"), starts_with("ruby"));
+        ASSERT_THAT("ruby-cpp", starts_with(std::string("ruby")));
+        ASSERT_THAT(std::string("ruby-cpp"), starts_with(std::string("ruby")));
+    }
+
+    TEST("ignoring case")
+    {
+        ASSERT_THAT("ruby-cpp", starts_with_ignoring_case("Ruby"));
+        ASSERT_THAT("ruby-cpp", is(starts_with_ignoring_case("Ruby")));
+
+        ASSERT_THAT(std::string("ruby-cpp"), starts_with_ignoring_case("RUBY"));
+        ASSERT_THAT("Ruby-Cpp", starts_with_ignoring_case(std::string("rUBY")));
+        ASSERT_THAT(std::string("RUBY-CPP"), starts_with_ignoring_case(std::string("ruby")));
+    }
+};
+\end{c++}
+\end{leftbar}
+
+\subsection{浮点数}
+
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+\ascii{匹配器} & \ascii{说明} \\
+\midrule
+\ascii{close\_to}  & \ascii{断言浮点数近似等于} \\
+\ascii{nan}  & \ascii{断言浮点数不是一个数字} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{浮点数的Matcher}
+\label{tbl:float-matcher}
+\end{table}
+
+\begin{leftbar}
+\begin{c++}[caption={test/hamcrest/NanTest.cpp}]
+#include <magellan/magellan.hpp>
+#include <math.h>
+
+USING_HAMCREST_NS
+
+FIXTURE(IsNanTest)
+{
+    TEST("double")
+    {
+        ASSERT_THAT(sqrt(-1.0), nan());
+        ASSERT_THAT(sqrt(-1.0), is(nan()));
+
+        ASSERT_THAT(1.0/0.0,  is_not(nan()));
+        ASSERT_THAT(-1.0/0.0, is_not(nan()));
+    }
+};
+\end{c++}
+\end{leftbar}
 
 \end{content}

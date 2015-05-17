@@ -10,9 +10,7 @@
 
 \begin{content}
 
-\ascii{Magellan}是一个简单的、可扩展的、且用户友好的\ascii{xUnit}测试框架。\ascii{Magellan}设计灵感来自于\ascii{Java}社区著名的测试框架：\ascii{JUnit}。
-
-\ascii{Magellan}采用\ascii{C++11}的语言特性，使得\ascii{xUnit}的设计和实现更加简单和自然；整体框架设计也更加具有可扩展性；最重要的是，\ascii{Magellan}使用例设计更加具有面向对象的特性，用户接口的\ascii{DSL}也更加地友好和统一。
+\ascii{Magellan}是一个简单的、可扩展的、使用\ascii{C++11}实现的\ascii{xUnit}测试框架，\ascii{Magellan}设计灵感来自于\ascii{Java}社区著名的测试框架\ascii{JUnit}。
 
 \end{content}
 
@@ -20,51 +18,49 @@
 
 \begin{content}
 
-\subsection{构建系统}
+\subsection{环境准备}
 
-为了简化\ascii{Magellan}的依赖管理和构建过程，\ascii{Magellan}采用\ascii{CMake}和\ascii{Rake}的构建系统。为此必须先安装{CMake}和\ascii{Ruby}，并确保\ascii{Rake}可用。
+\subsubsection{编译环境}
+
+\ascii{Magellan}目前仅在\ascii{Linux, MAC OS X}系统上测试过，仅支持\ascii{GCC4.8及以上版本，CLANG 3.4及以上版本}。
 
 \subsubsection{安装CMake}
 
 CMake的下载地址是：\href{http://www.cmake.org}{http://www.cmake.org}。以\ascii{Ubuntu}为例，使用\ascii{apt-get}安装\ascii{CMake}。
 
 \begin{leftbar}
-\begin{ruby}[caption={安装RVM}]
+\begin{ruby}[caption={安装CMAKE}]
 $ sudo apt-get install cmake
 \end{ruby}
 \end{leftbar}
 
-\subsubsection{安装Ruby}
+\subsubsection{安装l0-infra}
 
-为了方便管理\ascii{Ruby}的多个版本，推荐使用\ascii{RVM}安装\ascii{Ruby}。
+\ascii{Magellan}依赖于\ascii{l0-infra}，所以必须先安装\ascii{l0-infra}
 
 \begin{leftbar}
 \begin{ruby}[caption={安装RVM}]
-$ curl -L get.rvm.io | bash -s stable
-$ source ~/.rvm/scripts/rvm
-$ source ~/.bashrc
-$ source ~/.bash_profile
+$ git clone https://gitlab.com/horance/l0-infra.git
+$ cd l0-infra
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ sudo make install
 \end{ruby}
 \end{leftbar}
 
-然后使用\ascii{RVM}安装特定版本的\ascii{Ruby}，以安装\ascii{Ruby-2.1.5}为例。
+\subsection{安装Magellan}
 
 \begin{leftbar}
-\begin{ruby}[caption={安装Ruby}]
-$ rvm install 2.1.5
-$ rvm use 2.1.5 --default
-\end{ruby}
-\end{leftbar}
-
-\subsubsection{安装Magellan}
-
-最后使用\ascii{Git}从\ascii{Gitlab}克隆一份\ascii{MDK}实现，按照指令完成\ascii{Magellan}的安装： 
-
-\begin{leftbar}
-\begin{ruby}[caption={安装Magellan}]
-$ git clone https://gitlab.com/horance/mdk.git
-$ cd mdk
-$ rake
+\begin{ruby}[caption={安装RVM}]
+$ git clone https://gitlab.com/horance/magellan.git
+$ cd magellan
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ sudo make install
 \end{ruby}
 \end{leftbar}
 
@@ -77,59 +73,82 @@ $ rake
 \subsection{第一个测试用例}
 
 \begin{leftbar}
-\begin{c++}[caption={test/robot-cleaner/TestRobotCleaner.cpp}]
-#include "magellan/magellan.hpp"
-#include "robot-cleaner/RobotCleaner.h"
+\begin{c++}[caption={test/quantity/LengthTest.cpp}]
+#include <magellan/magellan.hpp>
+#include "quantity/length/Length.h"
 
 USING_HAMCREST_NS
 
-FIXTURE(RobotCleanerTest)
+FIXTURE(LengthTest)
 {
-    RobotCleaner robot;
-
-    void WHEN_I_send_instruction(Instruction* instruction)
+    TEST("1 FEET should equal to 12 INCH")
     {
-        robot.exec(instruction);
+        ASSERT_THAT(Length(1, FEET), eq(Length(12, INCH)));
     }
 
-    void THEN_the_robot_cleaner_should_be_in(const Position& position)
+    TEST("1 YARD should equal to 3 FEET")
     {
-        ASSERT_THAT(robot.getPosition(), is(position));
+        ASSERT_THAT(Length(1, YARD), eq(Length(3, FEET)));
     }
 
-    TEST("at the beginning, the robot should be in at the initial position")
+    TEST("1 MILE should equal to 1760 YARD")
     {
-        ASSERT_THAT(robot.getPosition(), is(Position(0, 0, NORTH)));
-    }
-
-    TEST("left instruction: 1-times")
-    {
-        WHEN_I_send_instruction(left());
-        THEN_the_robot_cleaner_should_be_in(Position(0, 0, WEST));
-    }
-
-    TEST("left instruction: 2-times")
-    {
-        WHEN_I_send_instruction(repeat(left(), 2));
-        THEN_the_robot_cleaner_should_be_in(Position(0, 0, SOUTH));
-    }
-
-    TEST("left instruction: 3-times")
-    {
-        WHEN_I_send_instruction(repeat(left(), 3));
-        THEN_the_robot_cleaner_should_be_in(Position(0, 0, EAST));
-    }
-
-    TEST("left instruction: 4-times")
-    {
-        WHEN_I_send_instruction(repeat(left(), 4));
-        THEN_the_robot_cleaner_should_be_in(Position(0, 0, NORTH));
+        ASSERT_THAT(Length(1, MILE), eq(Length(1760, YARD)));
     }
 };
 \end{c++}
 \end{leftbar}
 
-\subsection{Main函数}
+\ascii{Magellan}使用\ascii{Hamcrest}的断言机制，使得断言更加统一、自然，且具有良好的扩展性。
+
+\subsection{Length实现}
+
+\begin{tabular}{@{}p{\dimexpr0.45\linewidth-\tabcolsep} 
+                 | p{\dimexpr0.45\linewidth-\tabcolsep}@{}}
+\begin{c++}[caption={test/quantity/Length.h}]
+#include "quantity/base/Amount.h"
+
+enum LengthUnit
+{
+    INCH = 1,
+    FEET = 12 * INCH,
+    YARD = 3 * FEET,
+    MILE = 1760 * YARD,
+};
+
+struct Length
+{
+    Length(Amount amount, LengthUnit unit);
+
+    bool operator==(const Length&) const;
+    bool operator!=(const Length&) const;
+
+private:
+    const Amount amountInBaseUnit;
+};
+\end{c++}
+&
+\begin{c++}[caption={test/quantity/Length.cpp}]
+#include "quantity/base/Length.h"
+
+Length::Length(Amount amount, LengthUnit unit)
+  : amountInBaseUnit(unit * amount)
+{
+}
+
+bool Length::operator==(const Length& rhs) const
+{
+    return amountInBaseUnit == rhs.amountInBaseUnit;
+}
+
+bool Length::operator!=(const Length& rhs) const
+{
+    return !(*this == rhs);
+}
+\end{c++}
+\end{tabular}
+
+\subsection{\ascii{Main}函数}
 
 \begin{leftbar}
 \begin{c++}[caption={test/main.cpp}]
@@ -142,30 +161,59 @@ int main(int argc, char** argv)
 \end{c++}
 \end{leftbar}
 
-\subsection{运行用例}
+\subsection{\ascii{CMakeLists}构建脚本}
 
 \begin{leftbar}
-\begin{ruby}[caption={运行结果}]
-[==========] Running 5 test cases.
-[----------] 5 tests from All Tests
-[----------] 5 tests from RobotCleanerTest
-[ RUN      ] RobotCleanerTest::at the beginning, the robot should be in at the initial position
-[       OK ] RobotCleanerTest::at the beginning, the robot should be in at the initial position(60 us)
-[ RUN      ] RobotCleanerTest::left instruction: 1-times
-[       OK ] RobotCleanerTest::left instruction: 1-times(60 us)
-[ RUN      ] RobotCleanerTest::left instruction: 2-times
-[       OK ] RobotCleanerTest::left instruction: 2-times(60 us)
-[ RUN      ] RobotCleanerTest::left instruction: 3-times
-[       OK ] RobotCleanerTest::left instruction: 3-times(60 us)
-[ RUN      ] RobotCleanerTest::left instruction: 4-times
-[       OK ] RobotCleanerTest::left instruction: 4-times(60 us)
-[----------] 5 tests from RobotCleanerTest
+\begin{ruby}[caption={quantity/CMakeLists.txt}]
+project(quantity)
 
-[----------] 5 tests from All Tests
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
-[==========] 5 test cases ran.
-[  TOTAL   ] PASS: 5  FAILURE: 0  ERROR: 0  TIME: 300 us
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+FILE(GLOB_RECURSE all_files 
+*.cpp
+*.cc
+*.c++
+*.c
+*.C)
+
+add_executable(quantity-test ${all_files})
+target_link_libraries(quantity-test magellan l0-infra)
 \end{ruby}
 \end{leftbar}
+
+\subsection{构建\ascii{Quantity}}
+
+\begin{leftbar}
+\begin{ruby}[caption={构建Quantity，并执行测试}]
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+\end{ruby}
+\end{leftbar}
+
+\subsection{执行测试}
+
+\begin{ruby}[caption={执行测试}]
+$ ./quantity-test
+
+[==========] Running 3 test cases.
+[----------] 3 tests from All Tests
+[----------] 3 tests from LengthTest
+[ RUN      ] LengthTest::1 FEET should equal to 12 INCH
+[       OK ] LengthTest::1 FEET should equal to 12 INCH(40 us)
+[ RUN      ] LengthTest::1 YARD should equal to 3 FEET
+[       OK ] LengthTest::1 YARD should equal to 3 FEET(40 us)
+[ RUN      ] LengthTest::1 MILE should equal to 1760 YARD
+[       OK ] LengthTest::1 MILE should equal to 1760 YARD(40 us)
+[----------] 3 tests from LegnthTest
+
+[----------] 3 tests from All Tests
+
+[==========] 3 test cases ran.
+[  TOTAL   ] PASS: 3  FAILURE: 0  ERROR: 0  TIME: 120 us
+\end{ruby}
 
 \end{content}
