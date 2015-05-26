@@ -12,6 +12,8 @@
 
 \subsection{Fixture}
 
+在编写测试时，最费时的部分之一是将整个场景设置成某个已知的状态，并在测试结束后将其复原到初始状态。这个已知的状态称为测试的\ascii{Fixture}。 
+
 \begin{leftbar}
 \begin{c++}[caption={test/quantity/LengthTest.cpp}]
 #include <magellan/magellan.hpp>
@@ -24,40 +26,233 @@ FIXTURE(LengthTest)
 
 \ascii{FIXTURE}的参数可以是任意的\ascii{C/C++}标识符。一般而言，将其命名为\ascii{CUT(Class Under Test)}的名字即可。
 
-% \subsection{Setup/Teardown提取公共代码}
+\subsection{独立的Fixture}
 
-% \begin{leftbar}
-% \begin{c++}[caption={test/quantity/LengthTest.cpp}]
-% #include <magellan/magellan.hpp>
+使用\ascii{Setup/Teardown}分别完成场景的设置，并在测试结束后将其复原到初始状态。其中，\ascii{SETUP/TEARDOWN}为可选，如果未配置则默认实现为空。
 
-% FIXTURE(PerformanceTest)
-% {
-%     SETUP()
-%     {
-%     }
+\begin{leftbar}
+\begin{c++}[caption={test/quantity/LengthTest.cpp}]
+#include <magellan/magellan.hpp>
 
-%     TESTDOWN()
-%     {
-%     }
-% };
-% \end{c++}
-% \end{leftbar}
+FIXTURE(LengthTest)
+{
+    Length length;
 
-% 其中，\ascii{SETUP/TEARDOWN}为可选，如果未配置，则默认为空。
+    SETUP()
+    {}
 
-% \subsection{标记的Fixture}
+    TESTDOWN()
+    {}
 
-% 除第一个参数是必选之外，\ascii{FIXTURE}的其他参数为可选参数。当最后的一个可选的参数为标准的字符串字面值，则该参数常常做为\ascii{Fixture}的\ascii{Tag}，其中\ascii{Tag}以\ascii{@}开头。需要注意的是，做为\ascii{Tag}的字符串参数必须是\ascii{Fixture}的最后一个参数。
+    TEST("length test1")
+    {}
 
-% \begin{leftbar}
-% \begin{c++}[caption={test/quantity/Length.cpp}]
-% #include <magellan/magellan.hpp>
+    TEST("length test2")
+    {}
+};
+\end{c++}
+\end{leftbar}
 
-% FIXTURE(SaveEnergyTest, "@night")
-% {
-% };
-% \end{c++}
-% \end{leftbar}
+执行序列：
+\begin{enum}
+  \eitem{\ascii{Length}构造函数}
+  \eitem{\ascii{SETUP}}
+  \eitem{\ascii{length test1}}
+  \eitem{\ascii{TESTDOWN}}
+  \eitem{\ascii{Length}析构函数}
+  \eitem{\ascii{Length}构造函数}
+  \eitem{\ascii{SETUP}}
+  \eitem{\ascii{length test2}}
+  \eitem{\ascii{TESTDOWN}}
+  \eitem{\ascii{Length}析构函数}
+\end{enum}
+
+\subsection{BDD风格}
+
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+xUnit & BDD &  \\
+\midrule
+\ascii{FIXTURE}  & \ascii{CONTEXT} \\
+\ascii{SETUP}  & \ascii{BEFORE} \\
+\ascii{TEARDOWN}  & \ascii{AFTER} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{Magellan支持的两种\ascii{Fixture}风格}
+\label{tbl:xunit-bdd-style}
+\end{table}
+
+\subsection{共享的Fixture}
+
+假设存在如下的场景，每个\ascii{Test}都需要初始化比较耗时的资源，举例如数据库连接、开启浏览器等等。如果一个\ascii{Test}自己完成启动和关闭，测试的时间会拖的很长，给持续集成带来了很大的困难。
+
+为此需要在每组不会冲突的\ascii{Test}中共享一个浏览器窗口、或数据库的链接，为它们设计共享的\ascii{Fixture}。
+
+\begin{leftbar}
+\begin{c++}[caption={test/quantity/LengthTest.cpp}]
+#include <magellan/magellan.hpp>
+
+FIXTURE(LengthTest)
+{
+    Length length;
+
+    BEFORE_CLASS()
+    {}
+
+    AFTER_CLASS()
+    {}
+
+    BEFORE()
+    {}
+
+    AFTER()
+    {}
+
+    TEST("length test1")
+    {}
+
+    TEST("length test2")
+    {}
+};
+\end{c++}
+\end{leftbar}
+
+\ascii{test1和test2}的执行序列：
+\begin{enum}
+  \eitem{\ascii{BEFORE\_CLASS}}
+  \eitem{\ascii{Length}构造函数}
+  \eitem{\ascii{BEFORE}}
+  \eitem{\ascii{length test1}}
+  \eitem{\ascii{AFTER}}
+  \eitem{\ascii{Length}析构函数}
+  \eitem{\ascii{Length}构造函数}
+  \eitem{\ascii{BEFORE}}
+  \eitem{\ascii{length test2}}
+  \eitem{\ascii{AFTER}}
+  \eitem{\ascii{Length}析构函数}
+  \eitem{\ascii{AFTER\_CLASS}}
+\end{enum}
+
+\subsection{全局的Fixture}
+
+有时候需要在所有用例启动之前完成一次性的全局性的配置，在所有用例运行完成之后完成一次性的清理工作。\ascii{Magellan}则使用\ascii{BeforeAll}和\ascii{AfterAll}两个关键字来支持这样的特性的。
+
+\begin{leftbar}
+\begin{c++}[caption={test/DatabaseTest.cpp}]
+#include <magellan/magellan.hpp>
+
+BEFORE_ALL("before all 1")
+{
+}
+
+BEFORE_ALL("before all 2")
+{
+}
+
+AFTER_ALL("after all 1")
+{
+}
+
+AFTER_ALL("after all 2")
+{
+}
+\end{c++}
+\end{leftbar}
+
+\ascii{BeforeAll}和\ascii{AfterAll}向系统注册\ascii{Hook}即可，\ascii{Magellan}便能自动地发现它们，并执行它们。犹如\ascii{C/C++}不能保证各源文件中全局变量初始化的顺序一样，避免在源文件之间的\ascii{BeforeAll}设计不合理的依赖关系。
+
+\begin{leftbar}
+\begin{c++}[caption={test/quantity/LengthTest.cpp}]
+#include <magellan/magellan.hpp>
+
+FIXTURE(LengthTest)
+{
+    Length length;
+
+    BEFORE_CLASS()
+    {}
+
+    AFTER_CLASS()
+    {}
+
+    BEFORE()
+    {}
+
+    AFTER()
+    {}
+
+    TEST("length test1")
+    {}
+
+    TEST("length test2")
+    {}
+};
+\end{c++}
+\end{leftbar}
+
+\begin{leftbar}
+\begin{c++}[caption={test/quantity/VolumeTest.cpp}]
+#include <magellan/magellan.hpp>
+
+FIXTURE(VolumeTest)
+{
+    Volume volume;
+
+    BEFORE_CLASS()
+    {}
+
+    AFTER_CLASS()
+    {}
+
+    BEFORE()
+    {}
+
+    AFTER()
+    {}
+
+    TEST("volume test1")
+    {}
+
+    TEST("volume test1")
+    {}
+};
+\end{c++}
+\end{leftbar}
+
+\ascii{Magellan可能}的执行序列：
+\begin{enum}
+  \eitem{\ascii{before all 1}}
+  \eitem{\ascii{before all 2}}
+  \eitem{\ascii{LengthTest::BEFORE\_CLASS}}
+  \eitem{\ascii{Length}构造函数}
+  \eitem{\ascii{LengthTest::BEFORE}}
+  \eitem{\ascii{length test1}}
+  \eitem{\ascii{LengthTest::AFTER}}
+  \eitem{\ascii{Length}析构函数}
+  \eitem{\ascii{Length}构造函数}
+  \eitem{\ascii{LengthTest::BEFORE}}
+  \eitem{\ascii{length test2}}
+  \eitem{\ascii{LengthTest::AFTER}}
+  \eitem{\ascii{Length}析构函数}
+  \eitem{\ascii{LengthTest::AFTER\_CLASS}}
+  \eitem{\ascii{VolumeTest::BEFORE\_CLASS}}
+  \eitem{\ascii{Volume}构造函数}
+  \eitem{\ascii{LengthTest::BEFORE}}
+  \eitem{\ascii{volume test1}}
+  \eitem{\ascii{LengthTest::AFTER}}
+  \eitem{\ascii{Volume}析构函数}
+  \eitem{\ascii{Volume}构造函数}
+  \eitem{\ascii{LengthTest::BEFORE}}
+  \eitem{\ascii{volume test2}}
+  \eitem{\ascii{LengthTest::AFTER}}
+  \eitem{\ascii{Volume}析构函数}
+  \eitem{\ascii{VolumeTest::AFTER\_CLASS}}
+  \eitem{\ascii{after all 2}}
+  \eitem{\ascii{after all 1}}
+\end{enum}
 
 \end{content}
 
@@ -98,7 +293,7 @@ FIXTURE(LengthTest)
 
 \subsection{面向对象}
 
-\ascii{Magellan}实现\ascii{xUnit}时非常巧妙，使得用户设计用例时更加面向对象，例如下例。
+\ascii{Magellan}实现\ascii{xUnit}时非常巧妙，使得用户设计用例时更加面向对象。
 
 \begin{leftbar}
 \begin{c++}[caption={test/robot-cleaner/RobotCleanerTest.cpp}]
@@ -139,6 +334,8 @@ FIXTURE(RobotCleanerTest)
 };
 \end{c++}
 \end{leftbar}
+
+\subsubsection{消除重复}
 
 用例之间存在重复代码，为了改善设计，首先将所有用例使用的\ascii{RobotCleaner}对象直接定义在类体里即可。但在运行时，每个用例可得到独立的\ascii{RobotCleaner}实例。
 
@@ -176,9 +373,9 @@ FIXTURE(RobotCleanerTest)
 \end{c++}
 \end{leftbar}
 
-\subsection{提取函数}
+\subsubsection{函数提取}
 
-提取相关的函数，改善用户的表达力。提取的相关子函数，可以放在\ascii{Fixture}的内部，使得用例与其的距离最近，更加体现类作用域的概念。
+提取的相关子函数，可以直接放在\ascii{Fixture}的内部，使得用例与其的距离最近，更加体现类作用域的概念。
 
 \begin{leftbar}
 \begin{c++}[caption={test/robot-cleaner/RobotCleanerTest.cpp}]
@@ -208,9 +405,9 @@ FIXTURE(RobotCleanerTest)
         ASSERT_THAT(robot.getPosition(), is(position));
     }
 
-    TEST("at the beginning, the robot should be in at the initial position")
+    TEST("at the beginning")
     {
-        ASSERT_THAT(robot.getPosition(), is(Position(0, 0, NORTH)));
+        THEN_the_robot_cleaner_should_be_in(Position(0, 0, NORTH));
     }
 
     TEST("left instruction: 1-times")

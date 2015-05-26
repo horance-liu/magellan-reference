@@ -22,7 +22,22 @@
 
 \subsubsection{编译环境}
 
-\ascii{Magellan}目前仅在\ascii{Linux, MAC OS X}系统上测试过，仅支持\ascii{GCC4.8及以上版本，CLANG 3.4及以上版本}。
+\ascii{Magellan}目前仅在\ascii{Linux, MAC OS X}系统上测试过，仅支持\ascii{GCC，CLANG}两款编译器。
+
+\begin{table}[!htb]
+\resizebox{0.95\textwidth}{!} {
+\begin{tabular*}{1.2\textwidth}{@{}ll@{}}
+\toprule
+编译器 & 最低版本 &  \\
+\midrule
+\ascii{GCC}  & \ascii{4.8} \\
+\ascii{CLANG}  & \ascii{3.4} \\
+\bottomrule
+\end{tabular*}
+}
+\caption{支持编译器及其版本}
+\label{tbl:supported-compiler}
+\end{table}
 
 \subsubsection{安装CMake}
 
@@ -70,12 +85,94 @@ $ sudo make install
 
 \begin{content}
 
+\subsection{物理目录}
+
+\begin{leftbar}
+\begin{c++}[caption={Quantity物理设计}]
+ --quantity
+  |-- include
+  | |-- quantity
+  |-- src
+  | |-- quantity  
+  |-- test
+  | |-- quantity  
+  | |-- main.cpp
+  |-- CmakeList.txt
+\end{c++}
+\end{leftbar}
+
+\subsection{\ascii{main}函数}
+
+\begin{leftbar}
+\begin{c++}[caption={test/main.cpp}]
+#include "magellan/magellan.hpp"
+
+int main(int argc, char** argv)
+{
+    return magellan::run_all_tests(argc, argv);
+}
+\end{c++}
+\end{leftbar}
+
+\subsection{\ascii{CMAKE}构建脚本}
+
+\begin{leftbar}
+\begin{ruby}[caption={quantity/CMakeLists.txt}]
+project(quantity)
+
+cmake_minimum_required(VERSION 2.8)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+file(GLOB_RECURSE all_files 
+src/*.cpp
+src/*.cc
+src/*.c
+test/*.cpp
+test/*.cc
+test/*.c)
+
+add_executable(quantity-test ${all_files})
+
+target_link_libraries(quantity-test magellan l0-infra)
+\end{ruby}
+\end{leftbar}
+
+\subsection{构建\ascii{Quantity}}
+
+\begin{leftbar}
+\begin{ruby}[caption={构建Quantity}]
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+\end{ruby}
+\end{leftbar}
+
+\subsection{执行测试}
+
+\begin{ruby}[caption={执行测试}]
+$ ./quantity-test
+
+[==========] Running 0 test cases.
+[----------] 0 tests from All Tests
+[----------] 0 tests from All Tests
+
+[==========] 0 test cases ran.
+[  TOTAL   ] PASS: 0  FAILURE: 0  ERROR: 0  TIME: 0 us
+
+\end{ruby}
+
+\section{体验Magellan}
+
 \subsection{第一个测试用例}
 
 \begin{leftbar}
 \begin{c++}[caption={test/quantity/LengthTest.cpp}]
 #include <magellan/magellan.hpp>
-#include "quantity/length/Length.h"
+#include "quantity/Length.h"
 
 USING_HAMCREST_NS
 
@@ -85,35 +182,23 @@ FIXTURE(LengthTest)
     {
         ASSERT_THAT(Length(1, FEET), eq(Length(12, INCH)));
     }
-
-    TEST("1 YARD should equal to 3 FEET")
-    {
-        ASSERT_THAT(Length(1, YARD), eq(Length(3, FEET)));
-    }
-
-    TEST("1 MILE should equal to 1760 YARD")
-    {
-        ASSERT_THAT(Length(1, MILE), eq(Length(1760, YARD)));
-    }
 };
 \end{c++}
 \end{leftbar}
 
-\ascii{Magellan}使用\ascii{Hamcrest}的断言机制，使得断言更加统一、自然，且具有良好的扩展性。
+使用\ascii{Magellan}，只需要包含\ascii{magellan.hpp}一个头文件即可。\ascii{Magellan}使用\ascii{Hamcrest}的断言机制，使得断言更加统一、自然，且具有良好的扩展性；使用\ascii{USING\_HAMCREST\_NS}，从而可以使用\ascii{eq}代替\ascii{hamcrest::eq}，简短明确；除非出现名字冲突，否则推荐使用简写的\ascii{Matcher}。
 
 \subsection{Length实现}
 
 \begin{tabular}{@{}p{\dimexpr0.45\linewidth-\tabcolsep} 
                  | p{\dimexpr0.45\linewidth-\tabcolsep}@{}}
-\begin{c++}[caption={test/quantity/Length.h}]
-#include "quantity/base/Amount.h"
+\begin{c++}[caption={include/quantity/Length.h}]
+#include "quantity/Amount.h"
 
 enum LengthUnit
 {
     INCH = 1,
     FEET = 12 * INCH,
-    YARD = 3 * FEET,
-    MILE = 1760 * YARD,
 };
 
 struct Length
@@ -128,8 +213,8 @@ private:
 };
 \end{c++}
 &
-\begin{c++}[caption={test/quantity/Length.cpp}]
-#include "quantity/base/Length.h"
+\begin{c++}[caption={src/quantity/Length.cpp}]
+#include "quantity/Length.h"
 
 Length::Length(Amount amount, LengthUnit unit)
   : amountInBaseUnit(unit * amount)
@@ -148,46 +233,10 @@ bool Length::operator!=(const Length& rhs) const
 \end{c++}
 \end{tabular}
 
-\subsection{\ascii{Main}函数}
-
-\begin{leftbar}
-\begin{c++}[caption={test/main.cpp}]
-#include "magellan/magellan.hpp"
-
-int main(int argc, char** argv)
-{
-    return magellan::run_all_tests(argc, argv);
-}
-\end{c++}
-\end{leftbar}
-
-\subsection{\ascii{CMakeLists}构建脚本}
-
-\begin{leftbar}
-\begin{ruby}[caption={quantity/CMakeLists.txt}]
-project(quantity)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-FILE(GLOB_RECURSE all_files 
-*.cpp
-*.cc
-*.c++
-*.c
-*.C)
-
-add_executable(quantity-test ${all_files})
-target_link_libraries(quantity-test magellan l0-infra)
-\end{ruby}
-\end{leftbar}
-
 \subsection{构建\ascii{Quantity}}
 
 \begin{leftbar}
-\begin{ruby}[caption={构建Quantity，并执行测试}]
-$ mkdir build
+\begin{ruby}[caption={构建Quantity}]
 $ cd build
 $ cmake ..
 $ make
@@ -199,21 +248,17 @@ $ make
 \begin{ruby}[caption={执行测试}]
 $ ./quantity-test
 
-[==========] Running 3 test cases.
-[----------] 3 tests from All Tests
-[----------] 3 tests from LengthTest
+[==========] Running 1 test cases.
+[----------] 1 tests from All Tests
+[----------] 1 tests from LengthTest
 [ RUN      ] LengthTest::1 FEET should equal to 12 INCH
-[       OK ] LengthTest::1 FEET should equal to 12 INCH(40 us)
-[ RUN      ] LengthTest::1 YARD should equal to 3 FEET
-[       OK ] LengthTest::1 YARD should equal to 3 FEET(40 us)
-[ RUN      ] LengthTest::1 MILE should equal to 1760 YARD
-[       OK ] LengthTest::1 MILE should equal to 1760 YARD(40 us)
-[----------] 3 tests from LegnthTest
+[       OK ] LengthTest::1 FEET should equal to 12 INCH(13 us)
+[----------] 1 tests from LengthTest
 
-[----------] 3 tests from All Tests
+[----------] 1 tests from All Tests
 
-[==========] 3 test cases ran.
-[  TOTAL   ] PASS: 3  FAILURE: 0  ERROR: 0  TIME: 120 us
+[==========] 1 test cases ran.
+[  TOTAL   ] PASS: 1  FAILURE: 0  ERROR: 0  TIME: 13 us
 \end{ruby}
 
 \end{content}
