@@ -1,6 +1,6 @@
-\begin{savequote}[45mm]
-\ascii{Write programs for people first, computers second.}
-\qauthor{\ascii{- Steve McConnell}}
+\begin{savequote}[45mm]                                                     
+\ascii{There are two ways of constructing a software design. One way is to make it so simple that there are obviously no deficiencies. And the other way is to make it so complicated that there are no obvious deficiencies.}
+\qauthor{\ascii{- C.A.R. Hoare}}
 \end{savequote}
 
 \chapter{程序选项} 
@@ -16,14 +16,14 @@
 \resizebox{0.95\textwidth}{!} {
 \begin{tabular*}{1.2\textwidth}{@{}ll@{}ll@{}}
 \toprule
-选项 & 可选值 & 说明 &  \\
+选项 & 可选值(*为默认值) & 说明 &  \\
 \midrule
-\ascii{color}  &  \ascii{[yes*|no]}  &  用于终端打印时颜色的控制 \\
-\ascii{format} &  \ascii{[stdout*|xml|progress]}  &  用于终端打印输出的格式控制，其中\ascii{progress}用于打印进度条 \\
-\ascii{filter}  &  \ascii{regex}  &  匹配执行特定规则的用例集，其中默认执行所有用例 \\
-\ascii{break\_on\_failure}  &  \ascii{[yes|no*]}  &  当执行失败时，是否立即停止运行 \\
-\ascii{list\_tests}  &  \ascii{[yes|no*]}  &  不执行用例，仅罗列出用例 \\
-\ascii{repeat}  &  \ascii{[n|-1|1*]}  &  重复地执行用例\ascii{n}次，其中\ascii{-1}表示无限次 \\
+\ascii{- -color}  &  \ascii{[yes*|no]}  &  用于终端打印时颜色的控制 \\
+\ascii{- -format} &  \ascii{[stdout*|xml|progress]}  &  用于终端打印输出的格式控制，其中\ascii{progress}用于打印进度条 \\
+\ascii{- -filter}  &  \ascii{regex}  &  匹配执行特定规则的用例集，其中默认执行所有用例 \\
+\ascii{- -break\_on\_failure}  &  \ascii{[yes|no*]}  &  当执行失败时，是否立即停止运行 \\
+\ascii{- -list\_tests}  &  \ascii{[yes|no*]}  &  不执行用例，仅罗列出用例 \\
+\ascii{- -repeat}  &  \ascii{[n|-1|1*]}  &  重复地执行用例\ascii{n}次，其中\ascii{-1}表示无限次 \\
 \bottomrule
 \end{tabular*}
 }
